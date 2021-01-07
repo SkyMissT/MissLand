@@ -1,0 +1,91 @@
+核心：
+    生命周期
+    缓存机制
+
+
+三步走
+
+【with】
+  public RequestManager get(@NonNull FragmentActivity activity) {
+    if (Util.isOnBackgroundThread()) {
+      //    TODO ： Application 作用域
+      return get(activity.getApplicationContext());
+    } else {
+      //    TODO ： 非Application 作用域
+      assertNotDestroyed(activity);
+      FragmentManager fm = activity.getSupportFragmentManager();
+      return supportFragmentGet(activity, fm, /*parentHint=*/ null, isActivityVisible(activity));
+    }
+  }
+【load】
+
+    最终返回 RequestBuilder
+
+【into】
+
+
+    1.  ImageViewTarget （显示图片）无论走多远，最终一定回到这里
+    return into(
+            glideContext.buildImageViewTarget(view, transcodeClass),
+            /*targetListener=*/ null,
+            requestOptions,
+            Executors.mainThreadExecutor());
+
+
+    2. Request request = buildRequest(target, targetListener, options, callbackExecutor);  ===》 SingleRequest
+
+    3. SingleRequest.begin()
+
+    4.
+    if (Util.isValidDimensions(overrideWidth, overrideHeight)) {
+            onSizeReady(overrideWidth, overrideHeight);     // 用户设置宽、高
+          } else {
+            target.getSize(this);   //  用户没有设置宽、高，再次测量 ---》 onSizeReady
+          }
+
+    5. 查找活动缓存、内存缓存
+    Activity==》活动缓存（Activity真正显示的图片必须访问活动缓存）==》内存缓存
+    memoryResource = loadFromMemory(key, isMemoryCacheable, startTime);
+
+        //  查找活动缓存
+        EngineResource<?> active = loadFromActiveResources(key);
+        //  查找内存缓存  LRU管理（最近最少使用原则）maxSize = 3
+        EngineResource<?> cached = loadFromCache(key);
+
+    if (memoryResource == null) {
+        缓存没有
+    }
+
+    //  命中缓存，回调显示
+    cb.onResourceReady(memoryResource, DataSource.MEMORY_CACHE);
+
+    6.
+    //  查找有没有正在运行的任务
+    EngineJob<?> current = jobs.get(key, onlyRetrieveFromCache);
+
+    7.
+    EngineJob 线程池管家  DecodeJob 执行任务
+
+    8.
+    currentGenerator = getNextGenerator();  SourceGenerator 埋下伏笔
+
+
+    9.
+    SourceGenerator startNext()
+
+
+
+
+
+LRU有上限  LinkHashMap实现
+活动缓存没有上限
+
+正在使用的图片必须放到活动缓存，Activity结束后，图片放到LRU缓存，Activity打开后图片再从LRU缓存中移动到活动缓存
+
+
+
+
+
+
+
+
